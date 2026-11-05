@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>毛孩乾物比(DM)與碳水避坑計算器 | 拒吃劣質澱粉</title>
+  <title>毛孩乾物比(DM)與碳水避坑計算器 | 拍照辨識版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- 引入開源 OCR 引擎 -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
@@ -21,15 +23,41 @@
         🐾 貓狗飼主必備 · 避坑神器
       </span>
       <h1 class="text-2xl md:text-3xl font-black">毛孩乾物比(DM)與碳水計算器</h1>
-      <p class="text-amber-100 text-sm mt-1">10 秒拆穿包裝標示，別花大錢給毛孩吃昂貴澱粉！</p>
+      <p class="text-amber-100 text-sm mt-1">拍照一秒辨識，別花大錢買昂貴澱粉給毛孩！</p>
     </div>
   </header>
 
   <main class="max-w-xl mx-auto px-4 mt-6 space-y-6">
 
-    <!-- 快捷填入按鈕 -->
+    <!-- 拍照辨識專區 (核心新功能) -->
+    <div class="bg-gradient-to-r from-amber-500 to-amber-600 p-5 rounded-3xl shadow-md text-white text-center space-y-3">
+      <div class="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-full text-2xl">
+        <i class="fa-solid fa-camera"></i>
+      </div>
+      <div>
+        <h2 class="font-black text-lg">對準飼料/罐頭背面「成分分析」</h2>
+        <p class="text-xs text-amber-100 mt-0.5">拍張照，AI 自動幫你辨識並填入數值！</p>
+      </div>
+
+      <!-- 隱藏原生 File Input，以自訂按鈕觸發相機 -->
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)">
+      
+      <div class="flex gap-2 justify-center pt-1">
+        <button onclick="document.getElementById('cameraInput').click()" class="bg-white text-amber-600 hover:bg-amber-50 font-black py-2.5 px-5 rounded-2xl shadow-sm text-xs flex items-center gap-2 transition active:scale-95">
+          <i class="fa-solid fa-camera"></i> 開啟相機拍照 / 上傳
+        </button>
+      </div>
+
+      <!-- 辨識中 Loading 狀態 -->
+      <div id="ocrLoading" class="hidden bg-black/30 p-3 rounded-2xl text-xs flex items-center justify-center gap-2">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span id="ocrStatusText">正在辨識圖片中的數值，請稍候...</span>
+      </div>
+    </div>
+
+    <!-- 快捷填入範例 -->
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-amber-200">
-      <p class="text-xs font-bold text-stone-500 mb-2">⚡ 快速代入測試範例：</p>
+      <p class="text-xs font-bold text-stone-500 mb-2">⚡ 或是快速代入測試範例：</p>
       <div class="flex flex-wrap gap-2 text-xs">
         <button onclick="loadPreset('good_can')" class="bg-emerald-50 text-emerald-700 border border-emerald-300 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-medium transition">
           🟢 優質低碳主食罐
@@ -42,9 +70,12 @@
 
     <!-- 表單輸入區 -->
     <section class="bg-white p-6 rounded-3xl shadow-sm border border-amber-200 space-y-4">
-      <h2 class="font-black text-lg text-stone-800 flex items-center gap-2">
-        <i class="fa-solid fa-list-check text-amber-500"></i> 輸入外包裝保證成分分析 (%)
-      </h2>
+      <div class="flex justify-between items-center">
+        <h2 class="font-black text-lg text-stone-800 flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-amber-500"></i> 保證成分分析數值 (%)
+        </h2>
+        <span class="text-[11px] text-stone-400">可手動修改校正</span>
+      </div>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
@@ -64,7 +95,7 @@
           <input type="number" id="fiber" step="0.1" value="0.5" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-stone-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
         </div>
         <div class="col-span-2">
-          <label class="block text-xs font-bold text-stone-600 mb-1">粗灰分 (%) <span class="text-stone-400 font-normal">(若無標示請填 2.0)</span></label>
+          <label class="block text-xs font-bold text-stone-600 mb-1">粗灰分 (%) <span class="text-stone-400 font-normal">(無標示請填 2.0)</span></label>
           <input type="number" id="ash" step="0.1" value="2.0" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-stone-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
         </div>
       </div>
@@ -74,7 +105,7 @@
       </button>
     </section>
 
-    <!-- 結果展示卡（支援截圖轉發） -->
+    <!-- 結果展示卡 -->
     <div id="resultCard" class="hidden bg-white p-6 rounded-3xl shadow-lg border-2 border-amber-300 space-y-5">
       <div class="flex justify-between items-center border-b pb-3">
         <div>
@@ -92,7 +123,7 @@
         <div class="bg-amber-50 p-3 rounded-2xl border border-amber-100">
           <p class="text-xs text-stone-500 font-medium">還原乾物碳水比 (DM)</p>
           <p class="text-2xl font-black text-amber-700" id="dmCarb">4.5%</p>
-          <p class="text-[10px] text-stone-400 mt-0.5">貓建議 &lt; 10-15%</p>
+          <p class="text-[10px] text-stone-400 mt-0.5">貓咪建議 &lt; 10-15%</p>
         </div>
         <div class="bg-amber-50 p-3 rounded-2xl border border-amber-100">
           <p class="text-xs text-stone-500 font-medium">乾物蛋白質比 (DM)</p>
@@ -101,9 +132,8 @@
         </div>
       </div>
 
-      <!-- 辛辣診斷與自嘲金句 -->
+      <!-- 診斷金句 -->
       <div id="commentBox" class="p-3.5 rounded-2xl text-xs font-medium leading-relaxed">
-        <!-- JS 動態填入 -->
       </div>
 
       <!-- 社交裂變按鈕 -->
@@ -129,7 +159,6 @@
         </button>
       </div>
       <div id="waterResult" class="text-xs text-stone-600 mt-3 hidden bg-cyan-50 p-3 rounded-xl border border-cyan-100">
-        <!-- JS 動態注入 -->
       </div>
     </section>
 
@@ -170,6 +199,70 @@
   </main>
 
   <script>
+    // 拍照 / 上傳圖片 OCR 處理
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const loadingBox = document.getElementById('ocrLoading');
+      const statusText = document.getElementById('ocrStatusText');
+      loadingBox.classList.remove('hidden');
+
+      try {
+        statusText.innerText = "正在分析圖片中的成分數據...";
+        
+        // 呼叫 Tesseract OCR 辨識繁中與英文
+        const { data: { text } } = await Tesseract.recognize(
+          file,
+          'chi_tra+eng',
+          {
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                statusText.innerText = `辨識中... ${Math.round(m.progress * 100)}%`;
+              }
+            }
+          }
+        );
+
+        statusText.innerText = "比對數值中...";
+        parseNutritionText(text);
+        loadingBox.classList.add('hidden');
+        alert("✅ 辨識完成！已自動填入數值，請核對是否有小數點誤差後點擊「立即精算」！");
+      } catch (err) {
+        console.error(err);
+        loadingBox.classList.add('hidden');
+        alert("⚠️ 辨識失敗或光線不足，請嘗試手動輸入或換一張清晰的照片！");
+      }
+    }
+
+    // 智能解析 OCR 文字中的百分比與關鍵字
+    function parseNutritionText(rawText) {
+      const clean = rawText.replace(/\s+/g, '');
+
+      // 提取蛋白質
+      const proteinMatch = clean.match(/(?:蛋白質|粗蛋白|Protein)[^\d]*(\d+(?:\.\d+)?)/i);
+      if (proteinMatch) document.getElementById('protein').value = parseFloat(proteinMatch[1]);
+
+      // 提取脂肪
+      const fatMatch = clean.match(/(?:脂肪|粗脂肪|Fat)[^\d]*(\d+(?:\.\d+)?)/i);
+      if (fatMatch) document.getElementById('fat').value = parseFloat(fatMatch[1]);
+
+      // 提取水分
+      const moistureMatch = clean.match(/(?:水分|水份|Moisture)[^\d]*(\d+(?:\.\d+)?)/i);
+      if (moistureMatch) document.getElementById('moisture').value = parseFloat(moistureMatch[1]);
+
+      // 提取纖維
+      const fiberMatch = clean.match(/(?:纖維|粗纖維|Fiber)[^\d]*(\d+(?:\.\d+)?)/i);
+      if (fiberMatch) document.getElementById('fiber').value = parseFloat(fiberMatch[1]);
+
+      // 提取灰分
+      const ashMatch = clean.match(/(?:灰分|粗灰分|灰份|Ash)[^\d]*(\d+(?:\.\d+)?)/i);
+      if (ashMatch) document.getElementById('ash').value = parseFloat(ashMatch[1]);
+
+      // 自動觸發一次計算
+      calculateDM();
+    }
+
     function loadPreset(type) {
       if (type === 'good_can') {
         document.getElementById('protein').value = 12.5;
@@ -200,10 +293,7 @@
         return;
       }
 
-      // 淨碳水化合物 (NFE %) = 100 - (蛋白質 + 脂肪 + 水分 + 纖維 + 灰分)
       const rawCarb = Math.max(0, 100 - (p + f + m + fib + a));
-      
-      // 乾物比 (DM %)
       const dmProteinVal = ((p / dryMatter) * 100).toFixed(1);
       const dmCarbVal = ((rawCarb / dryMatter) * 100).toFixed(1);
 
@@ -225,13 +315,13 @@
         badge.innerText = "🟡 碳水稍高 (注意體態)";
         title.innerText = "中規中矩，建議搭配全肉主食！";
         comment.className = "p-3.5 rounded-2xl text-xs font-medium leading-relaxed bg-amber-50 text-amber-900 border border-amber-200";
-        comment.innerHTML = `<b>⚠️ 注意！</b> 乾物碳水佔了 <b>${dmCarbVal}%</b>。若毛孩已經結紮或活動量低，長期吃容易有發胖與糖尿病隱患，建議多補充水分或減少餵食量。`;
+        comment.innerHTML = `<b>⚠️ 注意！</b> 乾物碳水佔了 <b>${dmCarbVal}%</b>。若毛孩已經結紮或活動量低，長期吃容易有發胖隱患，建議多補充水分。`;
       } else {
         badge.className = "text-xs px-3 py-1 rounded-full font-black bg-rose-100 text-rose-800";
         badge.innerText = "🔴 碳水炸彈警報";
         title.innerText = "你買的不是肉，是昂貴的澱粉！";
         comment.className = "p-3.5 rounded-2xl text-xs font-medium leading-relaxed bg-rose-50 text-rose-900 border border-rose-200";
-        comment.innerHTML = `<b>🚨 踩雷警報！</b> 換算後乾物碳水高達 <b>${dmCarbVal}%</b>！貓咪是純肉食動物，代謝澱粉能力極弱。你花大錢買糧，廠商卻用了大量玉米、豆類灌水，建議考慮換糧。`;
+        comment.innerHTML = `<b>🚨 踩雷警報！</b> 換算後乾物碳水高達 <b>${dmCarbVal}%</b>！貓咪是純肉食動物，代謝澱粉能力極弱。廠商用了大量玉米、豆類灌水，建議考慮換糧。`;
       }
 
       document.getElementById('resultCard').classList.remove('hidden');
@@ -244,7 +334,6 @@
       
       const minWater = Math.round(w * 50);
       const optWater = Math.round(w * 60);
-      // RER = 70 * (體重)^0.75
       const rer = Math.round(70 * Math.pow(w, 0.75));
 
       const box = document.getElementById('waterResult');
@@ -257,7 +346,7 @@
 
     function copyShareText() {
       const carb = document.getElementById('dmCarb').innerText;
-      const text = `剛用毛孩避坑計算機算了一下家裡的飼料...換算乾物碳水居然高達 ${carb}！😱 大家快去翻一下背面的成分標示算一下，別花大錢買了一堆澱粉給貓狗吃：https://pet-dm.vercel.app`;
+      const text = `剛用毛孩避坑計算機算了一下家裡的飼料...換算乾物碳水居然高達 ${carb}！😱 大家快去翻一下背面的成分標示拍張照算一下，別花大錢買了一堆澱粉給貓狗吃：https://pet-dm.vercel.app`;
       navigator.clipboard.writeText(text);
       alert("✅ 已複製 Threads / 社群爆文文案！可以直接貼上發文取暖！");
     }
