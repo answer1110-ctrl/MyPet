@@ -274,4 +274,116 @@
       const moistureMatch = clean.match(/(?:水分|水份|Moisture)[^\d]*(\d+(?:\.\d+)?)/i);
       if (moistureMatch) document.getElementById('moisture').value = parseFloat(moistureMatch[1]);
 
-      const fiberMatch = clean.
+      const fiberMatch = clean.match(/(?:纖維|粗纖維|Fiber)[^\d]*(\d+(?:\.\d+)?)/i);
+      if (fiberMatch) document.getElementById('fiber').value = parseFloat(fiberMatch[1]);
+
+      const ashMatch = clean.match(/(?:灰分|粗灰分|灰份|Ash)[^\d]*(\d+(?:\.\d+)?)/i);
+      if (ashMatch) document.getElementById('ash').value = parseFloat(ashMatch[1]);
+
+      calculateDM();
+    }
+
+    function loadPreset(type) {
+      if (type === 'good_can') {
+        document.getElementById('protein').value = 12.5;
+        document.getElementById('fat').value = 6.0;
+        document.getElementById('moisture').value = 78.0;
+        document.getElementById('fiber').value = 0.5;
+        document.getElementById('ash').value = 1.8;
+      } else if (type === 'high_carb_kibble') {
+        document.getElementById('protein').value = 28.0;
+        document.getElementById('fat').value = 14.0;
+        document.getElementById('moisture').value = 10.0;
+        document.getElementById('fiber').value = 4.0;
+        document.getElementById('ash').value = 7.0;
+      }
+      calculateDM();
+    }
+
+    function calculateDM() {
+      const p = parseFloat(document.getElementById('protein').value) || 0;
+      const f = parseFloat(document.getElementById('fat').value) || 0;
+      const m = parseFloat(document.getElementById('moisture').value) || 0;
+      const fib = parseFloat(document.getElementById('fiber').value) || 0;
+      const a = parseFloat(document.getElementById('ash').value) || 0;
+
+      const dryMatter = 100 - m;
+      if (dryMatter <= 0) {
+        alert("水分數值有誤，請確認！");
+        return;
+      }
+
+      const rawCarb = Math.max(0, 100 - (p + f + m + fib + a));
+      const dmProteinVal = ((p / dryMatter) * 100).toFixed(1);
+      const dmCarbVal = ((rawCarb / dryMatter) * 100).toFixed(1);
+
+      document.getElementById('dmProtein').innerText = dmProteinVal + "%";
+      document.getElementById('dmCarb').innerText = dmCarbVal + "%";
+
+      const badge = document.getElementById('badgeLight');
+      const title = document.getElementById('resultTitle');
+      const comment = document.getElementById('commentBox');
+
+      if (dmCarbVal <= 12) {
+        badge.className = "text-xs px-3 py-1 rounded-full font-black bg-emerald-100 text-emerald-800";
+        badge.innerText = "🟢 頂級肉源 (低碳水)";
+        title.innerText = "符合貓咪天性的高肉量配方！";
+        comment.className = "p-3.5 rounded-2xl text-xs font-medium leading-relaxed bg-emerald-50 text-emerald-900 border border-emerald-200";
+        comment.innerHTML = `<b>🎉 恭喜！</b> 這款主食的碳水僅有 <b>${dmCarbVal}%</b>，蛋白質高達 <b>${dmProteinVal}%</b>。毛孩不易發胖，對腎臟與胰臟負擔小，飼主沒有花冤枉錢！`;
+      } else if (dmCarbVal <= 25) {
+        badge.className = "text-xs px-3 py-1 rounded-full font-black bg-amber-100 text-amber-800";
+        badge.innerText = "🟡 碳水稍高 (注意體態)";
+        title.innerText = "中規中矩，建議搭配全肉主食！";
+        comment.className = "p-3.5 rounded-2xl text-xs font-medium leading-relaxed bg-amber-50 text-amber-900 border border-amber-200";
+        comment.innerHTML = `<b>⚠️ 注意！</b> 乾物碳水佔了 <b>${dmCarbVal}%</b>。若毛孩已經結紮或活動量低，長期吃容易有發胖隱患，建議多補充水分。`;
+      } else {
+        badge.className = "text-xs px-3 py-1 rounded-full font-black bg-rose-100 text-rose-800";
+        badge.innerText = "🔴 碳水炸彈警報";
+        title.innerText = "你買的不是肉，是昂貴的澱粉！";
+        comment.className = "p-3.5 rounded-2xl text-xs font-medium leading-relaxed bg-rose-50 text-rose-900 border border-rose-200";
+        comment.innerHTML = `<b>🚨 踩雷警報！</b> 換算後乾物碳水高達 <b>${dmCarbVal}%</b>！貓咪是純肉食動物，代謝澱粉能力極弱。廠商用了大量玉米、豆類灌水，建議考慮換糧。`;
+      }
+
+      document.getElementById('resultCard').classList.remove('hidden');
+      document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function calcWater() {
+      const w = parseFloat(document.getElementById('petWeight').value) || 0;
+      if (w <= 0) return;
+      
+      const minWater = Math.round(w * 50);
+      const optWater = Math.round(w * 60);
+      const rer = Math.round(70 * Math.pow(w, 0.75));
+
+      const box = document.getElementById('waterResult');
+      box.classList.remove('hidden');
+      box.innerHTML = `
+        <p>💧 <b>每日基本喝水底線</b>：<b>${minWater}～${optWater} ml</b> (預防泌尿結石)</p>
+        <p class="mt-1">🔥 <b>每日靜止熱量需求 (RER)</b>：約 <b>${rer} 大卡 (kcal)</b></p>
+      `;
+    }
+
+    function copyShareText() {
+      const carb = document.getElementById('dmCarb').innerText;
+      const text = `剛用毛孩避坑計算機算了一下家裡的飼料...換算乾物碳水居然高達 ${carb}！😱 大家快去翻一下背面的成分標示拍張照算一下，別花大錢買了一堆澱粉給貓狗吃：https://pet-dm.vercel.app`;
+      navigator.clipboard.writeText(text);
+      alert("✅ 已複製 Threads / 社群爆文文案！可以直接貼上發文取暖！");
+    }
+
+    function downloadCard() {
+      const card = document.getElementById('resultCard');
+      html2canvas(card).then(canvas => {
+        const link = document.createElement('a');
+        link.download = '毛孩避坑診斷卡.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    }
+
+    function triggerCheckout() {
+      alert("👉 模擬金流跳轉：此處可直接掛上綠界 / 藍新科技 NT$ 199 快速付款連結！\n付款成功後自動重定向至完整 Google Sheet 紅黑榜與 PDF 下載頁面。");
+    }
+  </script>
+</body>
+</html>
