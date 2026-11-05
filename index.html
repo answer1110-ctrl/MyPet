@@ -1,1 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>毛孩乾物比(DM)與碳水避坑計算器 | 拒吃劣質澱粉</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+    body { font-family: 'Noto Sans TC', sans-serif; }
+  </style>
+</head>
+<body class="bg-amber-50 text-stone-800 min-h-screen pb-16">
 
+  <!-- Header -->
+  <header class="bg-amber-500 text-white py-6 px-4 shadow-md text-center">
+    <div class="max-w-xl mx-auto">
+      <span class="inline-block bg-amber-700/40 text-xs px-3 py-1 rounded-full font-bold mb-2 tracking-wider">
+        🐾 貓狗飼主必備 · 避坑神器
+      </span>
+      <h1 class="text-2xl md:text-3xl font-black">毛孩乾物比(DM)與碳水計算器</h1>
+      <p class="text-amber-100 text-sm mt-1">10 秒拆穿包裝標示，別花大錢給毛孩吃昂貴澱粉！</p>
+    </div>
+  </header>
+
+  <main class="max-w-xl mx-auto px-4 mt-6 space-y-6">
+
+    <!-- 快捷填入按鈕 -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-amber-200">
+      <p class="text-xs font-bold text-stone-500 mb-2">⚡ 快速代入測試範例：</p>
+      <div class="flex flex-wrap gap-2 text-xs">
+        <button onclick="loadPreset('good_can')" class="bg-emerald-50 text-emerald-700 border border-emerald-300 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-medium transition">
+          🟢 優質低碳主食罐
+        </button>
+        <button onclick="loadPreset('high_carb_kibble')" class="bg-rose-50 text-rose-700 border border-rose-300 px-3 py-1.5 rounded-lg hover:bg-rose-100 font-medium transition">
+          🔴 某高價進口乾糧 (碳水爆表)
+        </button>
+      </div>
+    </div>
+
+    <!-- 表單輸入區 -->
+    <section class="bg-white p-6 rounded-3xl shadow-sm border border-amber-200 space-y-4">
+      <h2 class="font-black text-lg text-stone-800 flex items-center gap-2">
+        <i class="fa-solid fa-list-check text-amber-500"></i> 輸入外包裝保證成分分析 (%)
+      </h2>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-stone-600 mb-1">粗蛋白質 (%)</label>
+          <input type="number" id="protein" step="0.1" value="12" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-stone-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-stone-600 mb-1">粗脂肪 (%)</label>
+          <input type="number" id="fat" step="0.1" value="6.5" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-stone-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-stone-600 mb-1">水分 (%)</label>
+          <input type="number" id="moisture" step="0.1" value="78" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-stone-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-stone-600 mb-1">粗纖維 (%)</label>
+          <input type="number" id="fiber" step="0.1" value="0.5" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-stone-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-bold text-stone-600 mb-1">粗灰分 (%) <span class="text-stone-400 font-normal">(若無標示請填 2.0)</span></label>
+          <input type="number" id="ash" step="0.1" value="2.0" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-stone-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+      </div>
+
+      <button onclick="calculateDM()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-3 rounded-2xl shadow-md transition transform active:scale-95 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-calculator"></i> 立即精算乾物比與碳水
+      </button>
+    </section>
+
+    <!-- 結果展示卡（支援截圖轉發） -->
+    <div id="resultCard" class="hidden bg-white p-6 rounded-3xl shadow-lg border-2 border-amber-300 space-y-5">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <span id="badgeLight" class="text-xs px-3 py-1 rounded-full font-black uppercase tracking-wider">🟢 安全綠燈</span>
+          <h3 class="text-xl font-black mt-1 text-stone-900" id="resultTitle">優良蛋白質配方</h3>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-stone-400">毛孩健康診斷卡</span>
+          <p class="text-xs font-bold text-amber-600">@毛孩避坑計算機</p>
+        </div>
+      </div>
+
+      <!-- 核心指標 -->
+      <div class="grid grid-cols-2 gap-3 text-center">
+        <div class="bg-amber-50 p-3 rounded-2xl border border-amber-100">
+          <p class="text-xs text-stone-500 font-medium">還原乾物碳水比 (DM)</p>
+          <p class="text-2xl font-black text-amber-700" id="dmCarb">4.5%</p>
+          <p class="text-[10px] text-stone-400 mt-0.5">貓建議 &lt; 10-15%</p>
+        </div>
+        <div class="bg-amber-50 p-3 rounded-2xl border border-amber-100">
+          <p class="text-xs text-stone-500 font-medium">乾物蛋白質比 (DM)</p>
+          <p class="text-2xl font-black text-amber-700" id="dmProtein">54.5%</p>
+          <p class="text-[10px] text-stone-400 mt-0.5">優質肉源核心</p>
+        </div>
+      </div>
+
+      <!-- 辛辣診斷與自嘲金句 -->
+      <div id="commentBox" class="p-3.5 rounded-2xl text-xs font-medium leading-relaxed">
+        <!-- JS 動態填入 -->
+      </div>
+
+      <!-- 社交裂變按鈕 -->
+      <div class="pt-2 flex gap-3">
+        <button onclick="copyShareText()" class="flex-1 bg-stone-900 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 hover:bg-stone-800 transition">
+          <i class="fa-solid fa-copy"></i> 複製 Threads/社團文案
+        </button>
+        <button onclick="downloadCard()" class="flex-1 bg-amber-500 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 hover:bg-amber-600 transition">
+          <i class="fa-solid fa-camera"></i> 下載診斷卡片
+        </button>
+      </div>
+    </div>
+
+    <!-- 附加工具：每日飲水量與熱量試算 -->
+    <section class="bg-white p-5 rounded-3xl shadow-sm border border-amber-200">
+      <h3 class="font-bold text-sm text-stone-800 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-droplet text-cyan-500"></i> 毛孩每日基本飲水量與熱量算客
+      </h3>
+      <div class="flex items-center gap-3">
+        <input type="number" id="petWeight" placeholder="體重 (kg)" value="4.5" class="w-32 bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none">
+        <button onclick="calcWater()" class="bg-cyan-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-cyan-700 transition">
+          試算
+        </button>
+      </div>
+      <div id="waterResult" class="text-xs text-stone-600 mt-3 hidden bg-cyan-50 p-3 rounded-xl border border-cyan-100">
+        <!-- JS 動態注入 -->
+      </div>
+    </section>
+
+    <!-- 變現出口：NT$ 199 終身指南 -->
+    <section class="bg-gradient-to-br from-amber-600 to-amber-700 text-white p-6 rounded-3xl shadow-xl text-center space-y-4">
+      <span class="inline-block bg-amber-400 text-stone-900 text-[11px] font-black px-3 py-0.5 rounded-full uppercase">
+        限時特惠 6 折
+      </span>
+      <h3 class="text-xl font-black">解鎖「毛孩健康避坑終身指南」</h3>
+      <p class="text-xs text-amber-100 leading-relaxed max-w-sm mx-auto">
+        不想每次手動算？怕去醫院被當盤子？一次解鎖全台市售罐頭乾糧紅黑榜與常規檢查防坑手冊！
+      </p>
+
+      <div class="bg-amber-800/40 p-4 rounded-2xl text-left text-xs space-y-2 max-w-sm mx-auto">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-check-circle text-amber-300"></i>
+          <span><b>200+ 款主食罐/乾糧紅黑榜</b>（碳水比/安全評級）</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-check-circle text-amber-300"></i>
+          <span><b>全台獸醫常規手術/血檢行情手冊</b>（免被灌水）</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-check-circle text-amber-300"></i>
+          <span><b>高齡與腎貓早期防禦飲食清單</b></span>
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <p class="text-xs text-amber-200 line-through">原價 NT$ 399</p>
+        <p class="text-3xl font-black text-amber-300 my-1">NT$ 199 <span class="text-xs font-normal text-white">/ 終身買斷</span></p>
+        <button onclick="triggerCheckout()" class="mt-2 w-full max-w-xs bg-amber-400 hover:bg-amber-300 text-stone-900 font-black py-3 rounded-2xl shadow-lg transition transform active:scale-95 text-sm">
+          🔥 立即小額贊助解鎖 (信用卡 / LINE Pay)
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    function loadPreset(type) {
+      if (type === 'good_can') {
+        document.getElementById('protein').value = 12.5;
+        document.getElementById('fat').value = 6.0;
+        document.getElementById('moisture').value = 78.0;
+        document.getElementById('fiber').value = 0.5;
+        document.getElementById('ash').value = 1.8;
+      } else if (type === 'high_carb_kibble') {
+        document.getElementById('protein').value = 28.0;
+        document.getElementById('fat').value = 14.0;
+        document.getElementById('moisture').value = 10.0;
+        document.getElementById('fiber').value = 4.0;
+        document.getElementById('ash').value = 7.0;
+      }
+      calculateDM();
+    }
+
+    function calculateDM() {
+      const p = parseFloat(document.getElementById('protein').value) || 0;
+      const f = parseFloat(document.getElementById('fat').value) || 0;
+      const m = parseFloat(document.getElementById('moisture').value) || 0;
+      const fib = parseFloat(document.getElementById('fiber').value) || 0;
+      const a = parseFloat(document.getElementById('ash').value) || 0;
+
+      const dryMatter = 100 - m;
+      if (dryMatter <= 0) {
+        alert("水分數值有誤，請確認！");
+        return;
+      }
+
+      // 淨碳水化合物 (NFE %) = 100 - (蛋白質 + 脂肪 + 水分 + 纖維 + 灰分)
+      const rawCarb = Math.max(0, 100 - (p + f + m + fib + a));
+      
+      // 乾物比 (DM %)
+      const dmProteinVal = ((p / dryMatter) * 100).toFixed(1);
+      const dmCarbVal = ((rawCarb / dryMatter) * 100).toFixed(1);
+
+      document.getElementById('dmProtein').innerText = dmProteinVal + "%";
+      document.getElementById('dmCarb').innerText = dmCarbVal + "%";
+
+      const badge = document.getElementById('badgeLight');
+      const title = document.getElementById('resultTitle');
+      const comment = document.getElementById('commentBox');
+
+      if (dmCarbVal <= 12) {
+        badge.className = "text-xs px-3 py-1 rounded-full font-black bg-emerald-100 text-emerald-800";
+        badge.innerText = "🟢 頂級肉源 (低碳水)";
+        title.innerText = "符合貓咪天性的高肉量配方！";
+        comment.className = "p-3.5 rounded-2xl text-xs font-medium leading-relaxed bg-emerald-50 text-emerald-900 border border-emerald-200";
+        comment.innerHTML = `<b>🎉 恭喜！</b> 這款主食的碳水僅有 <b>${dmCarbVal}%</b>，蛋白質高達 <b>${dmProteinVal}%</b>。毛孩不易發胖，對腎臟與胰臟負擔小，飼主沒有花冤枉錢！`;
+      } else if (dmCarbVal <= 25) {
+        badge.className = "text-xs px-3 py-1 rounded-full font-black bg-amber-100 text-amber-800";
+        badge.innerText = "🟡 碳水稍高 (注意體態)";
+        title.innerText = "中規中矩，建議搭配全肉主食！";
+        comment.className = "p-3.5 rounded-2xl text-xs font-medium leading-relaxed bg-amber-50 text-amber-900 border border-amber-200";
+        comment.innerHTML = `<b>⚠️ 注意！</b> 乾物碳水佔了 <b>${dmCarbVal}%</b>。若毛孩已經結紮或活動量低，長期吃容易有發胖與糖尿病隱患，建議多補充水分或減少餵食量。`;
+      } else {
+        badge.className = "text-xs px-3 py-1 rounded-full font-black bg-rose-100 text-rose-800";
+        badge.innerText = "🔴 碳水炸彈警報";
+        title.innerText = "你買的不是肉，是昂貴的澱粉！";
+        comment.className = "p-3.5 rounded-2xl text-xs font-medium leading-relaxed bg-rose-50 text-rose-900 border border-rose-200";
+        comment.innerHTML = `<b>🚨 踩雷警報！</b> 換算後乾物碳水高達 <b>${dmCarbVal}%</b>！貓咪是純肉食動物，代謝澱粉能力極弱。你花大錢買糧，廠商卻用了大量玉米、豆類灌水，建議考慮換糧。`;
+      }
+
+      document.getElementById('resultCard').classList.remove('hidden');
+      document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function calcWater() {
+      const w = parseFloat(document.getElementById('petWeight').value) || 0;
+      if (w <= 0) return;
+      
+      const minWater = Math.round(w * 50);
+      const optWater = Math.round(w * 60);
+      // RER = 70 * (體重)^0.75
+      const rer = Math.round(70 * Math.pow(w, 0.75));
+
+      const box = document.getElementById('waterResult');
+      box.classList.remove('hidden');
+      box.innerHTML = `
+        <p>💧 <b>每日基本喝水底線</b>：<b>${minWater}～${optWater} ml</b> (預防泌尿結石)</p>
+        <p class="mt-1">🔥 <b>每日靜止熱量需求 (RER)</b>：約 <b>${rer} 大卡 (kcal)</b></p>
+      `;
+    }
+
+    function copyShareText() {
+      const carb = document.getElementById('dmCarb').innerText;
+      const text = `剛用毛孩避坑計算機算了一下家裡的飼料...換算乾物碳水居然高達 ${carb}！😱 大家快去翻一下背面的成分標示算一下，別花大錢買了一堆澱粉給貓狗吃：https://pet-dm.vercel.app`;
+      navigator.clipboard.writeText(text);
+      alert("✅ 已複製 Threads / 社群爆文文案！可以直接貼上發文取暖！");
+    }
+
+    function downloadCard() {
+      const card = document.getElementById('resultCard');
+      html2canvas(card).then(canvas => {
+        const link = document.createElement('a');
+        link.download = '毛孩避坑診斷卡.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    }
+
+    function triggerCheckout() {
+      alert("👉 模擬金流跳轉：此處可直接掛上綠界 / 藍新科技 NT$ 199 快速付款連結！\n付款成功後自動重定向至完整 Google Sheet 紅黑榜與 PDF 下載頁面。");
+    }
+  </script>
+</body>
+</html>
